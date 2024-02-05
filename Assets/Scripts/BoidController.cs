@@ -5,17 +5,23 @@ public class BoidController : MonoBehaviour
     [Header("Init Vars")]
     public Boid boidPrefab; // Animal to represent a boid
     public int boidAmount = 5; // Amount of boids (cannot be changed while simulating)
-
+    public Danger dangerPrefab; // Items to be the dangers
+    public int dangerAmount = 5; // number of dangers to be initially created
     [Header("Behavior Vars")]
     public float centeringFactor = 0.005f; // Speed at which boids approach the center of all boids
     public float repulsionFactor = 0.05f; // Speed at which boids turn away from each other
     public float matchingFactor = 0.05f; // Percentage of neighbors' velocity that will be added to boid
     public int boidSpacing = 5; // Units between boids allowed before avoiding
+    public int dangerspacing = 15 // unit at which boids will sense danger. First attempt will use three layers of intensity
+    public int targetdraw = 0.005f; // Speed at which boids will adjust their vector to align with the target direction.
     //public int boidViewRange = 10; // How far each boid can see
 
     [Header("Flight Boundaries")]
     public Vector3 maxBoundaries;
     public Vector3 minBoundaries;
+
+    //TODO work with the danger array You have only created it you need to make sure it is filled and emptied
+    Danger[] dangers; //Array of Dangers
 
     Boid[] boids; // Array of boids
     delegate Vector3 AverageDelegate(Boid boid); // Delegate used to get averages of vector properties of the boids
@@ -28,6 +34,7 @@ public class BoidController : MonoBehaviour
     void Start()
     {
         boids = new Boid[boidAmount];
+        
         // Initialize array of boids
         for (int i = 0; i < boids.Length; i++)
         {
@@ -41,6 +48,17 @@ public class BoidController : MonoBehaviour
         InitBoidPositions();
     }
 
+    void CreateDanger()
+    {
+
+        //Create a danger Item when called danger make sure that you create a spawn point and a radius that new dangers will not be created 
+        //within until the desired number of dangers is present in scene. Don't forget to add and remove them from your dictionary.
+
+        dangers = new Danger[1]
+        {
+            dangers = Instantiate<Danger>(dangerPrefab);
+        }
+    }
     void HandleBoidAnimations(Boid boid)
     {
         animator = boid.GetComponent<Animator>();
@@ -65,6 +83,7 @@ public class BoidController : MonoBehaviour
         }
     }
 
+    //  TODO ROBERT look here to see if you need to be calculating your danger and draw factor here
     void HandleFlockAttributes()
     {
         centeringFactor = Mathf.Clamp(centeringFactor, 0f, 0.01f);
@@ -76,6 +95,8 @@ public class BoidController : MonoBehaviour
     void Update()
     {
         Vector3 offset1, offset2, offset3, offset4;
+
+        // TODO  Add the offset 5-6
         HandleFlockAttributes();
         
         foreach (Boid boid in boids) {
@@ -97,8 +118,16 @@ public class BoidController : MonoBehaviour
             offset2 = AvoidOtherBoids(boid);
             offset3 = AlignVelocity(boid);
             offset4 = KeepInBounds(boid);
+
+            // TODO UNCOMMENT offset 5 and 6 
+            // offset5 = AvoidDanger(boid);
+            // offset5 is intended to be the offset that is used to create avoidance behavior.
+            // offset6 = TargetDraw(boid)
             // Apply offsets to the boid's current velocity
             boid.velocity += (offset1 + offset2 + offset3 + offset4);
+            
+            //TODO Add in the offset for danger and draw to the velocity calc above
+
             // Limit speed
             LimitBoidVelocity(boid);
             // Move boid based on its velocity
@@ -108,6 +137,20 @@ public class BoidController : MonoBehaviour
         }
         
     }
+
+Vector3 AvoidDanger(Danger danger Boid boid)
+{
+    // first attempt to come up with an average of the danger locations to try to dodge them
+    Vector3 repulsion = vector3.zero;
+    foreach (Danger thisdanger in dangers) 
+    {
+        if (Vector3.Distance(thisdanger.transform.postion, boid.transform.position) < dangerspacing)
+        {
+            repulsion = boid.transform.positon - thisdanger.transform.position;
+        }
+    }
+        return repulsion * repulsionFactor;
+}
 
     // Boids fly towards the center position of other boids
     Vector3 FindFlockCenter(Boid boid)
@@ -135,6 +178,34 @@ public class BoidController : MonoBehaviour
         }
         return repulsion * repulsionFactor;
     }
+
+    // Boids move away from other boids when too close (distance adjusted by boidSpacing var)
+    Vector3 AvoidDanger(Boid boid)
+    {
+        // Vector to be applied to boids velocity indicating how to avoid the closest boid
+        Vector3 repulsion = Vector3.zero;
+
+        foreach (Boid otherBoid in boids)
+        {
+            if (otherBoid != boid)
+            {
+                // If the distance between the boid and other is less than the given spacing, then
+                // the boid's position is offset in the reverse direction.
+                if (Vector3.Distance(otherBoid.transform.position, boid.transform.position) < boidSpacing)
+                {
+                    repulsion += boid.transform.position - otherBoid.transform.position;
+                }
+            }
+        }
+        return repulsion * repulsionFactor;
+    }
+
+// Todo make function to draw birds towards target. Base it off the avoidance function. See if you need to adjust
+//the strength of the draw based off of distance.
+Vector3 TargetDraw(Boid boid)
+{
+    
+}
 
     // Boid's velocity is slightly adjusted in order to align it with its neighbors
     Vector3 AlignVelocity(Boid boid)
@@ -208,6 +279,8 @@ public class BoidController : MonoBehaviour
         return velocityOffset;
     }
 
+
+    //TODO add methods for the draw and danger values
     // Methods for changing vars via UI
     public void SetCenteringFactor(float centeringFactor) 
     {
